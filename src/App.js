@@ -12,9 +12,13 @@ import SideMenu from './components/structure/sideMenu'
 import master_user from './components/master/user'
 
 //production master
-import bill_of_material from './components/production_master/bill_of_material'
-import materials_master from './components/production_master/materials'
-import models_master from './components/production_master/models'
+import Bill_of_material from './components/production_master/bill_of_material'
+import Materials_master from './components/production_master/materials'
+import Models_master from './components/production_master/models'
+
+//production
+import Manufacturing_order from './components/production/manufacturing_order';
+import Work_order_sheet from './components/production/work_order_sheet';
 
 import {
   BrowserRouter as Router,
@@ -87,7 +91,7 @@ const SecuredLVRoute = ({ component: Component, ...rest }) => (
   <Route
     {...rest}
     render={(props) =>
-      isLoggedIn() === true && isLoginTimeOut(1, "h") === false ? (
+      isLoggedIn() === true && isLoginTimeOut(10, "h") === false ? (
         isPowerUser() === true ? (
           <Component {...props} />
         ) : (
@@ -126,10 +130,14 @@ class App extends Component {
           <SecuredLVRoute path="/master/user" component={master_user} />
 
           {/* production master */}
-          <SecuredLVRoute path="/production_master/bill_of_material" component={bill_of_material} />
-          <SecuredLVRoute path="/production_master/materials" component={materials_master} />
-          <SecuredLVRoute path="/production_master/models" component={models_master} />
+          <SecuredLVRoute path="/production_master/bill_of_material" component={Bill_of_material} />
+          <SecuredLVRoute path="/production_master/materials" component={Materials_master} />
+          <SecuredLVRoute path="/production_master/models" component={Models_master} />
 
+          {/* production */}
+          <SecuredRoute path="/production/manufacturing_order" component={Manufacturing_order} />
+          <SecuredRoute path="/production/work_order_sheet" component={Work_order_sheet} />
+          
           <Route exact={true} path="/" component={this.redirectToLogin} />
           <Route exact={true} path="*" component={this.redirectToLogin} />
         </Switch>

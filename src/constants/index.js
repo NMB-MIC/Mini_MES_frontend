@@ -38,7 +38,10 @@ export const server = {
   CHANGE_LV_URL: `manage_user/changeLevel`,
   MODELS_MASTER_URL: 'models_master/model',
   MATERIALS_MASTER_URL: 'materials_master/material',
-  BOM_URL: 'bill_of_material/bom'
+  BOM_URL: 'bill_of_material/bom',
+  FIND_BOM_URL: 'bill_of_material/find_bom',
+  MO_URL: 'manufacturing_order/mo',
+  WOS_URL: 'work_order_sheet/wos'
 };
 
 export const key = {

@@ -1,14 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { httpClient } from '../../../utils/HttpClient';
 import { key, OK, server } from '../../../constants';
 import moment from 'moment';
 import Modal from 'react-modal';
 import Swal from 'sweetalert2';
 import './bill_of_material.css'
+import _ from "lodash";
 
 export default function Bill_of_material() {
-  const [tableHeader, settableHeader] = useState([])
-  const [tableData, settableData] = useState([])
+  const [bom_model_list, setbom_model_list] = useState([])
+  const [expandableBomList, setexpandableBomList] = useState([])
 
   const [createModalIsOpen, setCreateModalIsOpen] = useState(false)
   const [editModelIsOpen, setEditModelIsOpen] = useState(false)
@@ -19,8 +20,6 @@ export default function Bill_of_material() {
 
   const [modelList, setmodelList] = useState([])
   const [materialList, setmaterialList] = useState([])
-  const [listBom, setlistBom] = useState([])
-
   useEffect(() => {
     getBomMaster()
     getModelList()
@@ -29,15 +28,9 @@ export default function Bill_of_material() {
 
   const getBomMaster = async () => {
     let result = await httpClient.get(server.BOM_URL)
-    if (result.data.result.length > 0) {
-      console.log(result.data.result);
-      let tableHeader = Object.keys(result.data.result[0])
-      tableHeader.push('Action')
-      settableData(result.data.result)
-      settableHeader(tableHeader)
-    } else {
-      settableData([])
-      settableHeader(['Action'])
+    if (result.data.bom_model_list.length > 0) {
+      setbom_model_list(result.data.bom_model_list)
+      setexpandableBomList(result.data.expandableBomList)
     }
   }
 
@@ -60,6 +53,27 @@ export default function Bill_of_material() {
       setmaterialList([])
     }
   }
+
+  const searchChanged = (e) => {
+    e.persist();
+    debounceSearch(e);
+  };
+  const debounceSearch = useRef(_.debounce(e => findBom(e), 500)).current;
+  const findBom = async (e) => {
+    if (e.target.value != '') {
+      let result = await httpClient.get(server.FIND_BOM_URL + '/' + e.target.value)
+      if (result.data.bom_model_list.length > 0) {
+        setbom_model_list(result.data.bom_model_list)
+        setexpandableBomList(result.data.expandableBomList)
+      } else {
+        setbom_model_list([])
+        setexpandableBomList([])
+      }
+    } else {
+      getBomMaster()
+    }
+  }
+
 
   const closeModal = () => {
     setmodel_number(null)
@@ -183,6 +197,7 @@ export default function Bill_of_material() {
                   <label> {material_number ? 'usage (' + materialList[material_number].unit_of_measure + ')' : 'usage'}</label>
                   <input required
                     value={usage}
+                    step={0.001}
                     onChange={(e) => {
                       setusage(e.target.value)
                     }} type="number" className="form-control" placeholder="Enter usage" />
@@ -202,105 +217,136 @@ export default function Bill_of_material() {
     )
   }
 
-  const renderTable = () => {
-    if (tableData.length > 0 && tableHeader.length > 0) {
-      const renderTableHeader = () => {
-        return tableHeader.map((item) => (
-          <th rowSpan={1}
-            colSpan={1}>
-            {item}
-          </th>
-        ))
-      }
+  const renderexpandableTable = () => {
 
-      const doDeleteBOM = (model_number_x, material_number_x) => {
-        Swal.fire({
-          title: 'Delete BOM : ' + model_number_x + ' ' + material_number_x + ' ?',
-          text: "You won't be able to revert this!",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#3085d6',
-          cancelButtonColor: '#d33',
-          confirmButtonText: 'Yes, delete it!'
-        }).then(async (result) => {
-          if (result.isConfirmed) {
-            const response = await httpClient.delete(server.BOM_URL, {
-              data: {
-                model_number: model_number_x,
-                material_number: material_number_x,
-                updater: localStorage.getItem(key.USER_NAME),
-              }
-            })
-            if (response.data.api_result === OK) {
-              getBomMaster()
-              Swal.fire(
-                'Deleted!',
-                'Your material master has been deleted.',
-                'success'
-              )
-            } else {
-              Swal.fire(
-                'error!',
-                'Your BOM master has not delete.',
-                'error'
-              )
+    const doDeleteBOM = (model_number_x, material_number_x) => {
+      Swal.fire({
+        title: 'Delete BOM : ' + model_number_x + ' ' + material_number_x + ' ?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          const response = await httpClient.delete(server.BOM_URL, {
+            data: {
+              model_number: model_number_x,
+              material_number: material_number_x,
+              updater: localStorage.getItem(key.USER_NAME),
             }
-
+          })
+          if (response.data.api_result === OK) {
+            getBomMaster()
+            Swal.fire(
+              'Deleted!',
+              'Your material master has been deleted.',
+              'success'
+            )
+          } else {
+            Swal.fire(
+              'error!',
+              'Your BOM master has not delete.',
+              'error'
+            )
           }
-        })
-      }
 
-      const renderTableRow = () => {
-        const generateTableData = (data) => {
-          return tableHeader.map((header) => (
-            <td>
-              {renderRow(data, header)}
-            </td>
+        }
+      })
+    }
+
+    const renderExpandableBomList = (index) => {
+      // console.log(expandableBomList.length, ' : ', index);
+      if (expandableBomList.length > 0 && expandableBomList.length > index) {
+        if (expandableBomList[index].length > 0) {
+          return expandableBomList[index].map((item) => (
+            <tr>
+              <td>
+              </td>
+              <td>
+                {item.material_number}
+              </td>
+              <td>
+                {item.material_name}
+              </td>
+              <td>
+                {item.usage}{' ' + item.unit_of_measure}
+              </td>
+              <td>
+                {item.updater}
+              </td>
+              <td>
+                {moment(item.createdAt).format('DD-MMM-YYYY HH:mm')}
+              </td>
+              <td>
+                {moment(item.updatedAt).format('DD-MMM-YYYY HH:mm')}
+              </td>
+              <td>
+                <button onClick={() => {
+                  doDeleteBOM(item.model_number, item.material_number)
+                }} className="btn btn-danger">Delete</button>
+              </td>
+            </tr>
           ))
         }
-
-        const renderRow = (data, header) => {
-          switch (header) {
-            case 'Action':
-              return <button onClick={(e) => {
-                e.preventDefault()
-                doDeleteBOM(data.model_number, data.material_number)
-              }} className='btn btn-danger'>Delete</button>
-
-
-            case 'createdAt':
-              return moment(data[header]).format('DD-MMM-YYYY HH:mm:ss')
-            case 'updatedAt':
-              return moment(data[header]).format('DD-MMM-YYYY HH:mm:ss')
-
-            default:
-              return data[header]
-          }
-        }
-
-        return tableData.map((item) => (
-          <tr>{generateTableData(item)}</tr>
-        ))
       }
-
-      return (
-        <div className="card-body table-responsive p-0">
-          <table
-            className="table table-hover text-nowrap"
-            role="grid"
-          >
-            <thead>
-              <tr role="row">
-                {renderTableHeader()}
-              </tr>
-            </thead>
-            <tbody>
-              {renderTableRow()}
-            </tbody>
-          </table>
-        </div>
-      )
     }
+
+    const renderBom_model_list = () => {
+      if (bom_model_list.length > 0) {
+        return bom_model_list.map((item, index) => (
+          <>
+            <tr data-widget="expandable-table" aria-expanded="false">
+              <td>
+                <i class="expandable-table-caret fas fa-caret-right fa-fw"></i>
+                <b>{item.model_number}</b>{' (' + item.model_name + ')'}
+              </td>
+            </tr>
+            <tr className="expandable-body d-none">
+              <td>
+                <div className="p-0">
+                  <table className="table table-hover">
+                    <thead>
+                      <th></th>
+                      <th>material_number</th>
+                      <th>material_name</th>
+                      <th>usage</th>
+                      <th>update by</th>
+                      <th>createdAt</th>
+                      <th>updatedAt</th>
+                      <th>action</th>
+                    </thead>
+                    <tbody>
+                      {renderExpandableBomList(index)}
+                    </tbody>
+                  </table>
+                </div>
+              </td>
+            </tr>
+          </>
+        ))
+      } else {
+        return (
+          <></>
+        )
+      }
+    }
+
+    return (
+      <div style={{ marginTop: 10 }} className="card-body table-responsive p-0">
+        <table className="table table-hover text-nowrap">
+          <thead>
+            {/* <tr role="row">
+              <th>Model number</th>
+            </tr> */}
+          </thead>
+          <tbody>
+            {renderBom_model_list()}
+          </tbody>
+        </table>
+      </div>
+    )
   }
 
   return (
@@ -330,10 +376,10 @@ export default function Bill_of_material() {
                 <div className="card-body">
                   <div className="input-group input-group-sm">
                     <input
-                      // onChange={(e) => searchChanged(e)}
+                      onChange={(e) => searchChanged(e)}
                       type="search"
                       className="form-control input-lg"
-                      placeholder="Enter search keyword"
+                      placeholder="Enter search model name"
                       style={{ borderRadius: 10, marginRight: 10 }}
                     />
                     <button
@@ -344,7 +390,8 @@ export default function Bill_of_material() {
                       Add BOM
                     </button>
                     {renderCreateBom()}
-                    {renderTable()}
+                    {/* {renderTable()} */}
+                    {renderexpandableTable()}
                   </div>
                 </div>
               </div>

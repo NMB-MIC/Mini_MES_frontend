@@ -4,45 +4,55 @@ import { key } from "../../../constants";
 
 class SideMenu extends Component {
 
-  renderMasters = (pathname) => {
-    if (
-      localStorage.getItem(key.USER_LV) === "power" ||
-      localStorage.getItem(key.USER_LV) === "admin"
-    ) {
-      return (
-        <li className="nav-item has-treeview">
-          <a
-            href="#"
-            className={
-              pathname.includes('/master')
-                ? "nav-link active"
-                : "nav-link"
-            }
-          >
-            <i className="nav-icon fas fa-clipboard-list" />
-            <p>
-              Manage master
-              <i className="fas fa-angle-left right" />
-            </p>
-          </a>
-          <ul className="nav nav-treeview" style={{ display: "none" }}>
-            <li className="nav-item">
-              <Link
-                to="/master/user"
-                className={
-                  pathname === "/master/user"
-                    ? "nav-link active"
-                    : "nav-link"
-                }
-              >
-                <i className="far fa-circle nav-icon" />
-                <p>User manage</p>
-              </Link>
-            </li>
-          </ul>
-        </li>
-      )
-    }
+
+  renderProduction = (pathname) => {
+    return (
+      <li className="nav-item has-treeview">
+        <a
+          className={
+            pathname.includes('/production/')
+              ? "nav-link active"
+              : "nav-link"
+          }
+        >
+          {/* <i className="" /> */}
+          <span className="nav-icon fas fa-industry iconify" data-icon="ic:outline-precision-manufacturing"></span>
+          <p>
+            Production
+            <i className="fas fa-angle-left right" />
+          </p>
+        </a>
+        <ul className="nav nav-treeview" style={{ display: "none" }}>
+          <li className="nav-item">
+            <Link
+              to="/production/manufacturing_order"
+              className={
+                pathname === "/production/manufacturing_order"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+            >
+              <i className="far fa-circle nav-icon" />
+              <p>Manufacturing order</p>
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link
+              to="/production/work_order_sheet"
+              className={
+                pathname === "/production/work_order_sheet"
+                  ? "nav-link active"
+                  : "nav-link"
+              }
+            >
+              <i className="far fa-circle nav-icon" />
+              <p>Work order sheet</p>
+            </Link>
+          </li>
+
+        </ul>
+      </li>
+    )
   }
 
   renderProductionMaster = (pathname) => {
@@ -53,7 +63,6 @@ class SideMenu extends Component {
       return (
         <li className="nav-item has-treeview">
           <a
-            href="#"
             className={
               pathname.includes('/production_master')
                 ? "nav-link active"
@@ -106,7 +115,47 @@ class SideMenu extends Component {
                 <p>BOM</p>
               </Link>
             </li>
-            
+
+          </ul>
+        </li>
+      )
+    }
+  }
+
+  renderMasters = (pathname) => {
+    if (
+      localStorage.getItem(key.USER_LV) === "power" ||
+      localStorage.getItem(key.USER_LV) === "admin"
+    ) {
+      return (
+        <li className="nav-item has-treeview">
+          <a
+            className={
+              pathname.includes('/master')
+                ? "nav-link active"
+                : "nav-link"
+            }
+          >
+            <i className="nav-icon fas fa-clipboard-list" />
+            <p>
+              Manage master
+              <i className="fas fa-angle-left right" />
+            </p>
+          </a>
+          <ul className="nav nav-treeview" style={{ display: "none" }}>
+            <li className="nav-item">
+              <Link
+                to="/master/user"
+                className={
+                  pathname === "/master/user"
+                    ? "nav-link active"
+                    : "nav-link"
+                }
+              >
+                <i className="far fa-circle nav-icon" />
+                <p>User manage</p>
+              </Link>
+            </li>
           </ul>
         </li>
       )
@@ -133,8 +182,11 @@ class SideMenu extends Component {
             {/* Sidebar Menu */}
             <nav className="mt-2">
               <ul className="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                {this.renderMasters(pathname)}
+                {this.renderProduction(pathname)}
+
                 {this.renderProductionMaster(pathname)}
+
+                {this.renderMasters(pathname)}
               </ul>
             </nav>
             {/* /.sidebar-menu */}

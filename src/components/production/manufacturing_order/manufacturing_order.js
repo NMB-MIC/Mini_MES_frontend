@@ -1,40 +1,66 @@
-import React, { useEffect, useState } from 'react'
-import moment from 'moment';
-import Modal from 'react-modal';
-import './materials.css'
+import React, { useEffect, useState, useRef } from 'react'
 import { httpClient } from '../../../utils/HttpClient';
 import { key, OK, server } from '../../../constants';
+import moment from 'moment';
+import Modal from 'react-modal';
 import Swal from 'sweetalert2';
+import './manufacturing_order.css'
+import _ from "lodash";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
-export default function Materials() {
-
-  const [tableHeader, settableHeader] = useState([])
-  const [tableData, settableData] = useState([])
+export default function Manufacturing_order() {
 
   const [createModalIsOpen, setCreateModalIsOpen] = useState(false)
   const [editModelIsOpen, setEditModelIsOpen] = useState(false)
 
-  //materials
-  const [material_number, setmaterial_number] = useState(null)
-  const [material_name, setmaterial_name] = useState(null)
-  const [unit_of_measure, setunit_of_measure] = useState(null)
-  const [drawing, setdrawing] = useState(null)
+  const [tableHeader, settableHeader] = useState([])
+  const [tableData, settableData] = useState([])
+
+  const [model_number, setmodel_number] = useState(null)
+  const [quantity, setquantity] = useState(null)
+  const [production_date, setproduction_date] = useState(moment().toDate())
+
+  const [modelList, setmodelList] = useState([])
+  const [moList, setmoList] = useState([])
+
+  useEffect(() => {
+    getMo()
+    getModelList()
+  }, [])
 
   const closeModal = () => {
-    setmaterial_number(null)
-    setmaterial_name(null)
-    setunit_of_measure(null)
+    setmodel_number(null)
+    setquantity(null)
     setCreateModalIsOpen(false)
     setEditModelIsOpen(false)
   }
 
-  useEffect(() => {
-    getMaterialsMaster()
+  const getModelList = async () => {
+    let result = await httpClient.get(server.BOM_URL)
+    if (result.data.bom_model_list.length > 0) {
+      setmodelList(result.data.bom_model_list)
+    } else {
+      setmodelList([])
+    }
+  }
 
-  }, [])
+  const getMo = async () => {
+    let result = await httpClient.get(server.MO_URL)
+    if (result.data.result.length > 0) {
+      let tableHeader = Object.keys(result.data.result[0])
+      tableHeader.push('Action')
+      settableData(result.data.result)
+      settableHeader(tableHeader)
+      setmoList(result.data.result)
+    } else {
+      settableData([])
+      settableHeader(['Action'])
+    }
+  }
 
-  const renderCreateMaterials = () => {
-    const doCraetematerials = () => {
+  const renderCreateMo = () => {
+    const doCraeteMo = () => {
       Swal.fire({
         title: 'Are you sure?',
         // text: "You won't be able to revert this!",
@@ -45,27 +71,40 @@ export default function Materials() {
         confirmButtonText: 'Yes!'
       }).then(async (result) => {
         if (result.isConfirmed) {
-
-          var data = new FormData();
-
-          data.append('material_number', material_number);
-          data.append('material_name', material_name);
-          data.append('unit_of_measure', unit_of_measure);
-          data.append('drawing', drawing);
-          data.append('updater', localStorage.getItem(key.USER_NAME))
-
-          let result = await httpClient.post(server.MATERIALS_MASTER_URL, data)
+          var data = {
+            model_number,
+            quantity,
+            production_date,
+            updater: localStorage.getItem(key.USER_NAME)
+          }
+          console.log(data);
+          let result = await httpClient.post(server.MO_URL, data)
           if (result.data.api_result === OK) {
-            getMaterialsMaster()
+            getMo()
+            closeModal()
             Swal.fire(
               'Success!',
               'Your model has been created.',
               'success'
             )
+          } else {
+            Swal.fire(
+              'Error!',
+              'Your model has been not create.',
+              'error'
+            )
           }
         }
       })
 
+    }
+
+    const renderModelsOption = () => {
+      if (modelList.length > 0) {
+        return modelList.map((item, index) => (
+          <option value={item.model_number}>{item.model_name + '(' + item.model_number + ')'}</option>
+        ))
+      }
     }
 
     return (
@@ -83,7 +122,7 @@ export default function Materials() {
           <div className="card card-success">
             <div className="card-header">
               <div className='d-flex justify-content-between'>
-                <h4 className='card-title"'>Create new materials master</h4>
+                <h4 className='card-title"'>Create new MO</h4>
                 <div class="card-tools">
                   <button type="button" class="btn btn-tool" onClick={(e) => {
                     e.preventDefault()
@@ -95,56 +134,35 @@ export default function Materials() {
             </div>
             <form onSubmit={(e) => {
               e.preventDefault()
-              doCraetematerials()
+              doCraeteMo()
             }}>
               <div class="card-body">
-
                 <div className="form-group">
-                  <label>Material number</label>
-                  <input required
-                    value={material_number}
-                    onChange={(e) => {
-                      setmaterial_number(e.target.value)
-                    }} type="text" className="form-control" placeholder="Enter Material number" />
-                </div>
-                <div className="form-group">
-                  <label>Material name</label>
-                  <input required
-                    value={material_name}
-                    onChange={(e) => {
-                      setmaterial_name(e.target.value)
-                    }} type="text" className="form-control" placeholder="Enter Material name" />
-                </div>
-                <div className="form-group">
-                  <label>unit of measure</label>
+                  <label>Model number</label>
                   <select
                     required
-                    value={unit_of_measure}
+                    value={model_number}
                     onChange={(e) => {
-                      setunit_of_measure(e.target.value)
-                    }} type="text" className="form-control" placeholder="Enter Unit of measure" >
-                    <option value={''}>---Pleces select Unit of measure---</option>
-                    <option value="pieces">Pcs</option>
-                    <option value="kilograms">Kg</option>
-                    <option value="grams">g</option>
-                    <option value="liter">l</option>
+                      setmodel_number(e.target.value)
+                    }} type="text" className="form-control" placeholder="Enter Model number" >
+                    <option value="">---Please select models number---</option>
+                    {renderModelsOption()}
                   </select>
                 </div>
-                <div className='form-group'>
-                  <label>Drawing file (pdf)</label>
-                  <div className="input-group">
-                    <div className="custom-file">
-                      <input onChange={
-                        (e) => {
-                          setdrawing(e.target.files[0])
-                          document.getElementById("chooseFile").innerHTML = e.target.files[0].name;
-                        }
-                      } type="file"
-                        className="custom-file-input"
-                        accept="application/pdf" />
-                      <label id="chooseFile" className="custom-file-label" htmlFor="exampleInputFile">Choose file</label>
-                    </div>
-                  </div>
+                <div className="form-group">
+                  <label>Quantity</label>
+                  <input
+                    required
+                    value={quantity}
+                    type="number"
+                    step={1}
+                    onChange={(e) => {
+                      setquantity(e.target.value)
+                    }} className="form-control" placeholder="Enter quantity" />
+                </div>
+                <div className="form-group">
+                  <label>Production date</label>
+                  <DatePicker required selected={production_date} className="form-control input-lg" onChange={(date) => setproduction_date(date)} />
                 </div>
               </div>
               <div class="card-footer">
@@ -161,19 +179,6 @@ export default function Materials() {
     )
   }
 
-  const getMaterialsMaster = async () => {
-    let result = await httpClient.get(server.MATERIALS_MASTER_URL)
-    if (result.data.result.length > 0) {
-      let tableHeader = Object.keys(result.data.result[0])
-      tableHeader.push('Action')
-      settableData(result.data.result)
-      settableHeader(tableHeader)
-    } else {
-      settableData([])
-      settableHeader(['Action'])
-    }
-  }
-
   const renderTable = () => {
     if (tableData.length > 0 && tableHeader.length > 0) {
       const renderTableHeader = () => {
@@ -184,9 +189,9 @@ export default function Materials() {
           </th>
         ))
       }
-      const doDeleteMaterialMaster = (material_number) => {
+      const doDeleteMaterialMaster = (manufacturing_order_number) => {
         Swal.fire({
-          title: 'Delete material : ' + material_number + ' ?',
+          title: 'manufacturing order : ' + manufacturing_order_number + ' ?',
           text: "You won't be able to revert this!",
           icon: 'warning',
           showCancelButton: true,
@@ -195,14 +200,14 @@ export default function Materials() {
           confirmButtonText: 'Yes, delete it!'
         }).then(async (result) => {
           if (result.isConfirmed) {
-            const response = await httpClient.delete(server.MATERIALS_MASTER_URL, {
+            const response = await httpClient.delete(server.MO_URL, {
               data: {
-                material_number,
+                manufacturing_order_number,
                 updater: localStorage.getItem(key.USER_NAME),
               }
             })
             if (response.data.api_result === OK) {
-              getMaterialsMaster()
+              getMo()
               Swal.fire(
                 'Deleted!',
                 'Your material master has been deleted.',
@@ -227,10 +232,11 @@ export default function Materials() {
             case 'Action':
               return <button onClick={(e) => {
                 e.preventDefault()
-                doDeleteMaterialMaster(data.material_number)
+                doDeleteMaterialMaster(data.manufacturing_order_number)
               }} className='btn btn-danger'>Delete</button>
 
-
+            case 'production_date':
+              return moment(data[header]).format('DD-MMM-YYYY')
             case 'createdAt':
               return moment(data[header]).format('DD-MMM-YYYY HH:mm:ss')
             case 'updatedAt':
@@ -272,7 +278,7 @@ export default function Materials() {
         <div className="container-fluid">
           <div className="row mb-2">
             <div className="col-sm-6">
-              <h1 className="m-0">Materials master</h1>
+              <h1 className="m-0">Manufacturing order</h1>
             </div>{/* /.col */}
             <div className="col-sm-6">
               <ol className="breadcrumb float-sm-right">
@@ -288,7 +294,7 @@ export default function Materials() {
             <div className="col-sm-12">
               <div className="card card-dark">
                 <div className="card-header">
-                  <h1 className="card-title">Materials master</h1>
+                  <h1 className="card-title">Manufacturing order</h1>
                 </div>
                 <div className="card-body">
                   <div className="input-group input-group-sm">
@@ -296,7 +302,7 @@ export default function Materials() {
                       // onChange={(e) => searchChanged(e)}
                       type="search"
                       className="form-control input-lg"
-                      placeholder="Enter search keyword"
+                      placeholder="Enter search MO number"
                       style={{ borderRadius: 10, marginRight: 10 }}
                     />
                     <button
@@ -304,9 +310,11 @@ export default function Materials() {
                         e.preventDefault();
                         setCreateModalIsOpen(true)
                       }} className="btn btn-success btn-sm">
-                      Add materials
+                      create MO.
                     </button>
-                    {renderCreateMaterials()}
+                  </div>
+                  <div>
+                    {renderCreateMo()}
                     {renderTable()}
                   </div>
                 </div>
@@ -315,6 +323,7 @@ export default function Materials() {
           </div>
         </div>
       </section>
+
     </div>
-  )
+  );
 }
